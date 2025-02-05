@@ -5,7 +5,7 @@ import Search from "./components/Search.jsx";
 import Spinner from "./components/Spinner.jsx";
 import MovieCard from "./components/MovieCard.jsx";
 import { useDebounce } from 'react-use';
-import { updateSearchCount } from './appwrite.js';
+import { getTrendingMovies, updateSearchCount } from './appwrite.js';
 
 const App =()=>{
     const [searchTerm, setSearchTerm] = useState("");
@@ -13,6 +13,7 @@ const App =()=>{
     const [movielists, setMovielists] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+    const [trendingMovies, setTrendingMovies] = useState([]);
     // debounce search term to limit the number of api calls
     useDebounce(() => setDebouncedSearchTerm(searchTerm), 500, [searchTerm]);
 
@@ -54,9 +55,24 @@ const App =()=>{
             setIsLoading(false);
         }
     }
+
+
+    const loadTrendingMovies = async()=>{
+        try {
+            const movies = await getTrendingMovies();
+            setTrendingMovies(movies);
+        } catch (error) {
+            console.error(`Error in loadTrendingMovies ${error}`);
+        }
+    }
+// sideeffect to fetch movies while debounced search term changes
     useEffect(()=>{
         fetchMovies( debouncedSearchTerm);
     },[ debouncedSearchTerm]);
+// sideeffect to fetch trending movies only once
+    useEffect(()=>{
+        loadTrendingMovies();
+    },[]);
 
 
     return (
@@ -68,8 +84,21 @@ const App =()=>{
                        <h1>Find <span className="text-gradient">Movies</span> You'll Enjoy without the Hassle</h1>
                        <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm}/>
                    </header>
+                   {trendingMovies.length > 0 && (
+                    <section className="trending">
+                        <h2>Trending Movies</h2>
+                        <ul>
+                            {trendingMovies.map((movie, index)=> (
+                                <li key={movie.$id}>
+                                    <p>{index +1 }</p>
+                                    <img src={movie.poster_url} alt={movie.title}/>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                   )}
                     <section className="all-movies">
-                        <h2 className="mt-[40px]">All Movies</h2>
+                        <h2>All Movies</h2>
                         {isLoading ? (<Spinner />
                         ) : error ? (<p className="text-white">{error}</p>
                         ): (
